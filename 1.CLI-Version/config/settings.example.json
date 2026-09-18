@@ -1,0 +1,18 @@
+{
+  "watch_folder": "watched_folder",
+  "email": {
+    "sender": "sender@example.com",
+    "receiver": "receiver@example.com",
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587
+  },
+  "schedule": {
+    "hour": 12,
+    "minute": 35
+  },
+  "notifications": {
+    "enabled": false,
+    "notify_on_success": true,
+    "notify_on_failure": true
+  }
+}
