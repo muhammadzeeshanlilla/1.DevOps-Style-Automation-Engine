@@ -1,0 +1,19 @@
+# Secrets
+.env
+.env.*
+*.env
+
+# Runtime files
+/engine.pid
+/engine.status.json
+/engine.status.*.tmp
+/engine.pid.*.tmp
+/engine.lock
+/engine.stop.*
+
+# Logs
+/logs/
+
+# Python bytecode/cache
+__pycache__/
+*.pyc

@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "email": {
+    "sender": "sender@example.com",
+    "receiver": "receiver@example.com",
+    "smtp_server": "smtp.example.com",
+    "smtp_port": 587
+  },
+  "tasks": [
+    {
+      "id": "daily-folder-report",
+      "name": "Daily folder report",
+      "type": "folder_report",
+      "enabled": true,
+      "trigger": {
+        "type": "daily",
+        "hour": 12,
+        "minute": 35
+      },
+      "parameters": {
+        "path": "watched_folder"
+      }
+    },
+    {
+      "id": "interval-email",
+      "name": "Example interval email",
+      "type": "email",
+      "enabled": false,
+      "trigger": {
+        "type": "interval",
+        "every_minutes": 15
+      },
+      "parameters": {
+        "subject": "Example automation message",
+        "body": "This is a configured email task."
+      }
+    },
+    {
+      "id": "file-event-email",
+      "name": "Example file-event email",
+      "type": "email",
+      "enabled": false,
+      "trigger": {
+        "type": "file_event",
+        "path": "watched_folder",
+        "events": [
+          "new",
+          "modified"
+        ]
+      },
+      "parameters": {
+        "subject": "Example file event",
+        "body": "This is a configured file-event email."
+      }
+    }
+  ],
+  "notifications": {
+    "enabled": false,
+    "notify_on_success": true,
+    "notify_on_failure": true
+  }
+}
