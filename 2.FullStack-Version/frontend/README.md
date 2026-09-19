@@ -1,16 +1,71 @@
-# React + Vite
+# DevOps Automation Engine Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + JavaScript + CSS + Vite dashboard for the local FastAPI automation-engine backend.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Start the backend first:
 
-## React Compiler
+```powershell
+cd ..\backend
+.\.venv\Scripts\python.exe -m uvicorn api.app:app --host 127.0.0.1 --port 8000
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+In another PowerShell terminal, start the frontend:
 
-## Expanding the ESLint configuration
+```powershell
+cd ..\frontend
+npm install
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Open `http://localhost:5173`. The backend must remain at `http://127.0.0.1:8000` because that is the API's configured local origin contract.
+
+For a different local API URL, set `VITE_API_BASE_URL` in your shell before starting Vite. Do not put credentials or private filesystem paths in this value or commit secrets in an environment file.
+
+## API mapping
+
+| UI area | Backend source |
+| --- | --- |
+| Header API indicator | `GET /api/health` and request availability |
+| Engine Status | `GET /api/status` |
+| Start Engine | `POST /api/engine/start` |
+| Stop Engine | `POST /api/engine/stop` |
+| Refresh Status | `GET /api/health`, `GET /api/status`, and `GET /api/tasks` |
+| System Health | API health plus scheduler/monitor data from `GET /api/status` |
+| Task Overview | Live counts/queue/current task from `GET /api/status`; configuration counts fall back to `GET /api/tasks` while stopped |
+| Recent Execution | Current and last result fields from `GET /api/status` |
+| Tasks page | `GET /api/tasks` |
+| Activity Logs page | `GET /api/logs?limit=20` by default; selector supports 20, 50, or 100 |
+| Settings page | Local frontend/API URLs and the tasks response's configuration source |
+
+Missing runtime fields are displayed as None or Unavailable; the frontend does not invent execution history, task names, scheduler times, paths, or log details.
+
+## Phase 1 scope
+
+- Responsive dashboard with Dashboard, Tasks, Activity Logs, and Settings views
+- Automatic status polling every four seconds with overlap protection
+- Safe start/stop controls with loading and 200/202/409/503 handling
+- Read-only task configuration
+- Sanitized backend log summaries only
+- API-offline and stale/missing runtime states
+- No authentication, database, task editing, SMTP inputs, or frontend credential storage
+
+The API client is centralized in `src/api/client.js`. React built-in state and hooks provide navigation and data handling; there is no routing or state-management dependency.
+
+## Verify
+
+```powershell
+npm run lint
+npm run build
+```
+
+Current verification:
+
+- ESLint: passed with zero warnings/errors
+- Vite production build: passed
+- Browser flow: all four views, API connection, STOPPED, real start/RUNNING data, duplicate-start 409, cooperative stop, final STOPPED, and API-offline handling passed
+- Responsive evidence: 1440 x 1024 and 390 x 844
+- Browser console: zero errors in the final clean run
+
+See `design-qa.md` and `qa/` for the final visual comparison and browser-rendered evidence.

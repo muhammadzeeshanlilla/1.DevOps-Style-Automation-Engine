@@ -1,121 +1,107 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
+import { getHealth, getStatus, getTasks } from './api/client'
+import Header from './components/Header'
+import Sidebar from './components/Sidebar'
+import Dashboard from './pages/Dashboard'
+import Logs from './pages/Logs'
+import Settings from './pages/Settings'
+import Tasks from './pages/Tasks'
+
+const PAGE_TITLES = { dashboard: 'Dashboard', tasks: 'Tasks', logs: 'Activity Logs', settings: 'Settings' }
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [activePage, setActivePage] = useState('dashboard')
+  const [health, setHealth] = useState(null)
+  const [status, setStatus] = useState(null)
+  const [tasks, setTasks] = useState(null)
+  const [connection, setConnection] = useState('checking')
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [statusError, setStatusError] = useState('')
+  const pollInFlight = useRef(false)
+
+  const refreshStatus = useCallback(async ({ foreground = false } = {}) => {
+    if (pollInFlight.current) return
+    pollInFlight.current = true
+    if (foreground) setRefreshing(true)
+    try {
+      setStatus(await getStatus())
+      setConnection('connected')
+      setStatusError('')
+    } catch (error) {
+      setConnection(error.status === 0 ? 'offline' : 'connected')
+      setStatusError(error.status === 0
+        ? 'The local API is unavailable. Start the backend, then try again.'
+        : 'Engine status is temporarily unavailable. Retry in a moment.')
+    } finally {
+      pollInFlight.current = false
+      if (foreground) setRefreshing(false)
+    }
+  }, [])
+
+  const refreshAll = useCallback(async ({ foreground = false } = {}) => {
+    if (pollInFlight.current) return
+    pollInFlight.current = true
+    if (foreground) setRefreshing(true)
+    try {
+      const [healthResult, statusResult, tasksResult] = await Promise.allSettled([
+        getHealth(), getStatus(), getTasks(),
+      ])
+      if (healthResult.status === 'fulfilled') {
+        setHealth(healthResult.value)
+        setConnection('connected')
+      } else {
+        setHealth(null)
+        setConnection('offline')
+      }
+      if (statusResult.status === 'fulfilled') {
+        setStatus(statusResult.value)
+        setStatusError('')
+      } else {
+        setStatusError('The local API is unavailable. Start the backend, then try again.')
+      }
+      if (tasksResult.status === 'fulfilled') setTasks(tasksResult.value)
+    } finally {
+      pollInFlight.current = false
+      if (foreground) setRefreshing(false)
+      setInitialLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const initialRequest = window.setTimeout(refreshAll, 0)
+    return () => window.clearTimeout(initialRequest)
+  }, [refreshAll])
+  useEffect(() => {
+    const interval = window.setInterval(() => refreshStatus(), 4000)
+    return () => window.clearInterval(interval)
+  }, [refreshStatus])
+
+  const selectPage = (page) => {
+    setActivePage(page)
+    document.title = `${PAGE_TITLES[page]} | DevOps Automation Engine`
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const page = activePage === 'tasks'
+    ? <Tasks data={tasks} onReload={() => refreshAll({ foreground: true })} />
+    : activePage === 'logs'
+      ? <Logs />
+      : activePage === 'settings'
+        ? <Settings tasks={tasks} />
+        : <Dashboard health={health} status={status} tasks={tasks} connection={connection}
+            initialLoading={initialLoading} refreshing={refreshing} statusError={statusError}
+            onRefresh={() => refreshAll({ foreground: true })} />
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    <div className="app-shell">
+      <Sidebar activePage={activePage} onNavigate={selectPage} />
+      <div className="workspace">
+        <Header pageTitle={PAGE_TITLES[activePage]} connection={connection} engineState={status?.state} />
+        <main id="main-content" className="main-content">{page}</main>
+      </div>
+    </div>
   )
 }
 
