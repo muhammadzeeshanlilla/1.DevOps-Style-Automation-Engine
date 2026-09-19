@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
-import { getHealth, getStatus, getTasks } from './api/client'
+import { getEmailSettings, getHealth, getMonitoringJobs, getStatus, getTasks } from './api/client'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
@@ -8,13 +8,15 @@ import Logs from './pages/Logs'
 import Settings from './pages/Settings'
 import Tasks from './pages/Tasks'
 
-const PAGE_TITLES = { dashboard: 'Dashboard', tasks: 'Tasks', logs: 'Activity Logs', settings: 'Settings' }
+const PAGE_TITLES = { dashboard: 'Dashboard', tasks: 'Monitoring Jobs', logs: 'Activity Logs', settings: 'Settings' }
 
 function App() {
   const [activePage, setActivePage] = useState('dashboard')
   const [health, setHealth] = useState(null)
   const [status, setStatus] = useState(null)
   const [tasks, setTasks] = useState(null)
+  const [monitoringJobs, setMonitoringJobs] = useState(null)
+  const [emailSettings, setEmailSettings] = useState(null)
   const [connection, setConnection] = useState('checking')
   const [initialLoading, setInitialLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -45,8 +47,8 @@ function App() {
     pollInFlight.current = true
     if (foreground) setRefreshing(true)
     try {
-      const [healthResult, statusResult, tasksResult] = await Promise.allSettled([
-        getHealth(), getStatus(), getTasks(),
+      const [healthResult, statusResult, tasksResult, jobsResult, emailResult] = await Promise.allSettled([
+        getHealth(), getStatus(), getTasks(), getMonitoringJobs(), getEmailSettings(),
       ])
       if (healthResult.status === 'fulfilled') {
         setHealth(healthResult.value)
@@ -62,6 +64,8 @@ function App() {
         setStatusError('The local API is unavailable. Start the backend, then try again.')
       }
       if (tasksResult.status === 'fulfilled') setTasks(tasksResult.value)
+      if (jobsResult.status === 'fulfilled') setMonitoringJobs(jobsResult.value)
+      if (emailResult.status === 'fulfilled') setEmailSettings(emailResult.value)
     } finally {
       pollInFlight.current = false
       if (foreground) setRefreshing(false)
@@ -85,12 +89,14 @@ function App() {
   }
 
   const page = activePage === 'tasks'
-    ? <Tasks data={tasks} onReload={() => refreshAll({ foreground: true })} />
+    ? <Tasks data={monitoringJobs} email={emailSettings} engineState={status?.state}
+        onReload={() => refreshAll({ foreground: true })} />
     : activePage === 'logs'
       ? <Logs />
       : activePage === 'settings'
-        ? <Settings tasks={tasks} />
-        : <Dashboard health={health} status={status} tasks={tasks} connection={connection}
+        ? <Settings key={emailSettings?.sender || 'email-loading'} tasks={tasks} email={emailSettings} engineState={status?.state}
+            onEmailUpdated={setEmailSettings} />
+        : <Dashboard health={health} status={status} monitoringJobs={monitoringJobs} connection={connection}
             initialLoading={initialLoading} refreshing={refreshing} statusError={statusError}
             onRefresh={() => refreshAll({ foreground: true })} />
 

@@ -53,6 +53,40 @@ Missing runtime fields are displayed as None or Unavailable; the frontend does n
 
 The API client is centralized in `src/api/client.js`. React built-in state and hooks provide navigation and data handling; there is no routing or state-management dependency.
 
+## Monitoring jobs - Phase 2
+
+Open Tasks, choose **Create Monitoring Job**, enter and validate a local folder,
+choose daily, minute, or hourly scheduling, and save. Start the engine from the
+Dashboard. The Python backend - not the browser - monitors new, modified, and
+deleted files and emails the accumulated report on schedule.
+
+The Monitoring Jobs page uses the dedicated monitoring-job CRUD endpoints and
+POST /api/folders/validate. The dashboard job counts come from
+GET /api/monitoring-jobs. Settings reads the global sender, receiver, server, and
+port from GET /api/email-settings.
+
+Hourly choices are stored as equivalent minute intervals. Configuration controls
+are disabled unless the engine is STOPPED and never restart it automatically.
+Recipient email is shared, not per job. Per-event filtering, authentication, and
+database storage are intentionally deferred.
+
+## Secure local email setup
+
+Settings provides sender, receiver, SMTP server, SMTP port, and a write-only
+Google App Password field. Never enter a normal Gmail password. Enable Google
+2-Step Verification, open https://myaccount.google.com/apppasswords, create an
+App Password, and use the generated value here. Never share it or commit it.
+
+With **Remember App Password securely on this device** enabled, the backend uses
+the operating system credential store. Otherwise it keeps the credential only
+for the current backend session. The password field clears after saving and is
+never refilled, returned by the API, logged, or placed in browser storage.
+
+Use **Send Test Email** only after saving. Success means SMTP accepted the
+message; check the receiver inbox or spam folder. **Forget Saved App Password**
+deletes OS-stored and session copies without changing the non-secret settings.
+Email controls require the engine to be STOPPED.
+
 ## Verify
 
 ```powershell

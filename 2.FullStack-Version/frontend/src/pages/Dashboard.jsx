@@ -26,7 +26,7 @@ function displayMonitors(monitors, stopped, available) {
 }
 
 export default function Dashboard({
-  health, status, tasks, connection, initialLoading, refreshing, statusError, onRefresh,
+  health, status, monitoringJobs, connection, initialLoading, refreshing, statusError, onRefresh,
 }) {
   if (initialLoading && !status) return <LoadingState label="Connecting to the local automation API..." />
 
@@ -36,8 +36,8 @@ export default function Dashboard({
   const snapshot = runtime?.available ? runtime.snapshot : null
   const scheduler = displayWorker(snapshot?.scheduler, stopped)
   const monitors = displayMonitors(snapshot?.monitors || [], stopped, Boolean(snapshot))
-  const configuredCount = snapshot?.configured_count ?? tasks?.count
-  const enabledCount = snapshot?.enabled_count ?? tasks?.tasks?.filter((task) => task.enabled).length
+  const configuredCount = monitoringJobs?.count
+  const enabledCount = monitoringJobs?.jobs?.filter((job) => job.enabled).length
   const current = snapshot?.current
   const lastResult = snapshot?.last_result
 
@@ -106,8 +106,8 @@ export default function Dashboard({
       <section className="panel overview-panel" aria-labelledby="task-overview-title">
         <div className="panel-heading"><div><p className="section-kicker">Current workload</p><h2 id="task-overview-title">Task Overview</h2></div></div>
         <div className="metrics-grid">
-          <StatusCard icon={ListChecksIcon} label="Configured Tasks" value={configuredCount ?? 'Unavailable'} note={tasks ? 'From validated configuration' : 'Configuration unavailable'} />
-          <StatusCard icon={CheckCircleIcon} label="Enabled Tasks" value={enabledCount ?? 'Unavailable'} note="Ready when the engine runs" tone="positive" />
+          <StatusCard icon={ListChecksIcon} label="Monitoring Jobs" value={configuredCount ?? 'Unavailable'} note={monitoringJobs ? 'Folder report jobs on disk' : 'Configuration unavailable'} />
+          <StatusCard icon={CheckCircleIcon} label="Enabled Jobs" value={enabledCount ?? 'Unavailable'} note="Ready when the engine runs" tone="positive" />
           <StatusCard icon={QueueIcon} label="Queued Events" value={snapshot ? snapshot.queued_events : 'Unavailable'} note={snapshot ? 'Waiting for processing' : 'Requires live runtime'} tone="warning" />
           <StatusCard icon={ActivityIcon} label="Current Task" value={current?.id || 'None'} note={current ? `${current.type} / ${current.phase}` : 'No current task reported'} />
         </div>
@@ -118,7 +118,9 @@ export default function Dashboard({
         <div className="execution-grid">
           <div className="execution-item"><span><FileTextIcon size={24} weight="duotone" /></span><div>
             <p>Last Task Result</p><strong>{lastResult?.status || 'None'}</strong>
-            <small>{lastResult ? `Task ${lastResult.id}` : 'No runtime result is available'}</small>
+            <small>{lastResult
+              ? `Task ${lastResult.id} / Finished ${new Date(lastResult.finished_at).toLocaleString()}`
+              : 'No runtime result is available'}</small>
           </div></div>
           <div className="execution-item"><span><ActivityIcon size={24} weight="duotone" /></span><div>
             <p>Current Running Task</p><strong>{current?.id || 'None'}</strong>
