@@ -1,0 +1,3 @@
+-r requirements-api.txt
+# FastAPI/Starlette TestClient; unittest itself is in the standard library.
+httpx>=0.27,<1.0

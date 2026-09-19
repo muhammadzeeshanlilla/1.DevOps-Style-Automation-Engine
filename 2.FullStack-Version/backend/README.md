@@ -1,5 +1,7 @@
 # DevOps-Style Automation Engine
 
+> **Copied FullStack backend - API Phase 1:** the original standard-library CLI/core remains unchanged. A separate local FastAPI layer provides health, status, start, cooperative stop, read-only tasks and sanitized logs. See [API_README.md](API_README.md) for API installation, startup, endpoints and verification (406 existing + 63 API tests). Frontend development is deferred.
+
 > A configuration-driven CLI automation engine built with Python for task scheduling, folder monitoring, automated email delivery, report generation, logging, and safe runtime control.
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
@@ -26,7 +28,7 @@ The engine can:
 - maintain runtime logs
 - safely start, stop, and report engine status
 
-The project is built using the **Python standard library** and does not require a third-party framework.
+The CLI engine is built using the **Python standard library** and does not require a third-party framework. The optional HTTP API in this copied FullStack backend uses the dependencies documented in [API_README.md](API_README.md).
 
 ---
 

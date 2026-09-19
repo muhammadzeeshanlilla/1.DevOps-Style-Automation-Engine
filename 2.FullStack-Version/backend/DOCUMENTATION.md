@@ -9,6 +9,8 @@
 
 ## Current final verification and presentation
 
+**Copied FullStack backend API Phase 1:** a separate FastAPI package now wraps the unchanged CLI engine. See [API_README.md](API_README.md) for dependencies, local launch commands, safe endpoint contracts and the 63 separate API tests. The 406-test CLI baseline and the historical CLI documentation below are preserved. No frontend, authentication, database or task-writing API has been added.
+
 The completed CLI version covers all eight core internship requirements: start/stop/live status, JSON-configured multiple tasks, daily and interval scheduling, new/modified/deleted monitoring and configured event execution, task lifecycle logging, SMTP actions with opt-in completion/failure notifications, cooperative background workers and modular structure.
 
 **Current result: 406 passing tests and 40 Python files passing AST syntax checks.** SMTP is mocked; no real SMTP/network connection is used. Both configuration examples validate. Runtime source behavior and local settings remain unchanged by submission cleanup. Python 3.9+ is required; final verification ran on Windows/Python 3.14.7, not every supported version or a real Unix host.

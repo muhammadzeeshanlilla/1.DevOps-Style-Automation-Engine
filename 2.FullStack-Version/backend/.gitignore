@@ -17,3 +17,6 @@
 # Python bytecode/cache
 __pycache__/
 *.pyc
+
+# Isolated API environment
+/.venv/
