@@ -1,6 +1,66 @@
-# Backend API - Phase 1
+# Backend API - Secure Local Email Phase
 
-This copied FullStack backend adds a local FastAPI interface to the completed CLI engine. The CLI/core implementation, existing tests, and JSON configuration are unchanged. There is no frontend, authentication, database, or task-writing API.
+This copied FullStack backend adds a local FastAPI interface to the completed CLI engine. The CLI/core implementation remains unchanged. Phase 2 adds validated monitoring-job configuration endpoints; there is no authentication or database.
+
+## Monitoring jobs - Phase 2
+
+The workflow is: select a folder -> choose a report schedule -> save the job ->
+start the engine -> monitor continuously -> email the accumulated activity report.
+
+Monitoring jobs map to the existing folder_report task type and reuse FileMonitor,
+the scheduler, FolderReportHandler, and the SMTP sender.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | /api/folders/validate | Check that a path is an accessible directory; never list contents |
+| GET/POST | /api/monitoring-jobs | List or create jobs |
+| GET/PUT/DELETE | /api/monitoring-jobs/{job_id} | Read, update, or delete one job |
+| PATCH | /api/monitoring-jobs/{job_id}/enabled | Enable or disable a job |
+| GET | /api/email-settings | Read safe global sender/receiver/server/port settings |
+
+Daily schedules use a 24-hour hour and minute. Hourly input maps to every_minutes
+by multiplying by 60. Folder reports include new, modified, and deleted changes;
+per-event filtering is intentionally deferred because folder_report does not
+support it.
+
+Mutations require an unambiguously STOPPED engine and otherwise return 409.
+The complete schema-v2 result is validated by the existing loader, written to a
+flushed temporary file, and atomically replaces only config/settings.json.
+Failures preserve the old file. Existing generic tasks, email, and notifications
+are retained. Email is global; the App Password is never written to configuration.
+
+## Secure local email setup
+
+The Settings UI updates sender, receiver, SMTP hostname, and port in validated
+JSON. The App Password is write-only. With **Remember** enabled, keyring stores
+it under service DevOpsAutomationEngine and the normalized sender account.
+Windows uses Credential Manager; macOS uses Keychain; Linux requires a supported
+Secret Service/keyring backend. No secure backend means a safe failure, never a
+plaintext fallback.
+
+With **Remember** disabled, the App Password exists only in API-process memory
+and is lost when that process exits. GET responses report credential status but
+never return the secret. DELETE /api/email-settings/credential removes both the
+session copy and saved OS credential while preserving non-secret settings.
+
+PUT /api/email-settings and POST /api/email-settings/test require a stopped
+engine. Test email reuses the existing SMTP sender and reports SMTP acceptance,
+not guaranteed inbox delivery. Automated tests never use a real SMTP server.
+
+At API engine start, the credential is placed only in a copied child environment
+as SMTP_PASSWORD. The existing engine and direct CLI SMTP_PASSWORD workflow are
+unchanged.
+
+### How to create a Gmail App Password
+
+1. Enable Google 2-Step Verification.
+2. Open Google Account Security, then App passwords.
+3. Create an App Password for this application.
+4. Enter the generated App Password in the dashboard.
+5. Never use your normal Gmail password and never commit the App Password to Git.
+
+Open https://myaccount.google.com/apppasswords for setup. If App passwords is
+unavailable, the account may not currently be eligible.
 
 ## Install
 
@@ -50,6 +110,9 @@ Ctrl+C stops the API server, not an independently running engine. Stop the engin
 | POST | /api/engine/stop | Existing instance-scoped cooperative stop; 200 ownership released, 202 still waiting, 409 unsafe ownership |
 | GET | /api/tasks | Read-only validated tasks from the configuration on disk |
 | GET | /api/logs | Sanitized recent log summaries; default limit 100, allowed range 1-200 |
+| GET / PUT | /api/email-settings | Read safe status or save non-secret settings and a write-only credential |
+| POST | /api/email-settings/test | Send an explicitly requested SMTP test message while stopped |
+| DELETE | /api/email-settings/credential | Remove session and OS-stored credential copies |
 
 Invalid request parameters return a generic 422 response without echoing supplied values. Operational failures use fixed safe messages rather than raw exceptions.
 
@@ -93,15 +156,15 @@ python main.py stop
 
 As before, CLI start runs in the foreground; use another terminal for status/stop. CLI and API use the same derived project-root paths and runtime ownership. No machine-specific path is embedded in API source.
 
-## Configuration and credentials
+## Direct CLI configuration and credentials
 
-Keep using the existing `config/settings.json` and loader rules. Configuration is not accepted through HTTP. Configure SMTP_PASSWORD only in the environment, never in a file:
+Direct CLI usage keeps the existing `config/settings.json` loader rules. Configure SMTP_PASSWORD only in the environment, never in a file:
 
 ```powershell
 $env:SMTP_PASSWORD = [System.Net.NetworkCredential]::new("", (Read-Host "SMTP password" -AsSecureString)).Password
 ```
 
-The API-launched engine inherits the server's environment. Set credentials before starting Uvicorn if real email tasks require them. The API does not write credentials, create a .env file, or send an email itself. Starting the engine executes your configured workflows and can send real SMTP messages; only start it when that is intended.
+The API-launched engine may retrieve a dashboard credential from session memory or the OS credential store and passes it only to the engine child. Starting the engine executes configured workflows and can send real SMTP messages; only start it when intended.
 
 Task IDs are public operational identifiers: do not put secrets or sensitive customer data in them. The API also redacts the current SMTP_PASSWORD from returned IDs. All task parameters and raw error text are excluded.
 
@@ -115,7 +178,7 @@ python -B -m unittest discover -s tests
 .\.venv\Scripts\python.exe -m pip check
 ```
 
-Verification: **406 existing tests + 63 separate API tests = 469 passing tests**. Existing tests were neither edited nor weakened.
+Verification: **406 existing tests + 103 separate API tests = 509 passing tests**.
 
 API tests cover safe schemas, ownership changes, corrupt/stale snapshots, secret exclusion, bounded logs, CORS/Host/origin safeguards, HTTP error semantics and start/stop behavior. Five integration tests run the real existing CLI/Engine with injected idle configuration and isolated temporary runtime directories. They verify CLI/API interoperability and concurrent ownership without sending SMTP or editing customer configuration.
 

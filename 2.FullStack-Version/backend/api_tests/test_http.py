@@ -199,10 +199,15 @@ class HTTPTests(APITestCase):
         self.assertEqual(response.status_code, 422)
         self.assertNotIn("PRIVATE_SECRET", response.text)
 
-    def test_only_phase_one_routes(self):
+    def test_public_route_contract(self):
         paths = self.client.get("/openapi.json").json()["paths"]
         self.assertEqual(set(paths), {"/api/health", "/api/status", "/api/tasks", "/api/logs",
-                                     "/api/engine/start", "/api/engine/stop"})
+                                     "/api/engine/start", "/api/engine/stop",
+                                     "/api/folders/validate", "/api/monitoring-jobs",
+                                     "/api/monitoring-jobs/{job_id}",
+                                     "/api/monitoring-jobs/{job_id}/enabled",
+                                     "/api/email-settings", "/api/email-settings/test",
+                                     "/api/email-settings/credential"})
         self.assertEqual(self.client.post("/api/tasks").status_code, 405)
         self.assertEqual(self.client.put("/api/tasks/report").status_code, 404)
 

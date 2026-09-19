@@ -1,13 +1,30 @@
 {
-  "watch_folder": "watched_folder",
+  "schema_version": 2,
   "email": {
-    "sender": "sender@example.com",
-    "receiver": "receiver@example.com",
+    "sender": "muhammadzeeshanlilla2002@gmail.com",
+    "receiver": "mz366953@gmail.com",
     "smtp_server": "smtp.gmail.com",
     "smtp_port": 587
   },
-  "schedule": {
-    "hour": 12,
-    "minute": 35
+  "tasks": [
+    {
+      "id": "folder_checking",
+      "name": "Monitoring job folder_checking",
+      "type": "folder_report",
+      "enabled": true,
+      "trigger": {
+        "type": "daily",
+        "hour": 11,
+        "minute": 43
+      },
+      "parameters": {
+        "path": "E:\\novotech\\1.DevOps-Style-Automation-Engine\\2.FullStack-Version\\watched_folder"
+      }
+    }
+  ],
+  "notifications": {
+    "enabled": false,
+    "notify_on_success": true,
+    "notify_on_failure": true
   }
 }

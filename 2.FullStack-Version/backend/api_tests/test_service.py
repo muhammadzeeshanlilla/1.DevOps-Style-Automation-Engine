@@ -62,7 +62,8 @@ class ServiceTests(APITestCase):
         self.assertEqual(options["stdout"], subprocess.DEVNULL)
         self.assertEqual(options["stderr"], subprocess.DEVNULL)
         self.assertTrue(options["close_fds"])
-        self.assertNotIn("env", options)
+        self.assertIn("env", options)
+        self.assertIsNot(options["env"], os.environ)
         if os.name == "nt":
             self.assertEqual(options["creationflags"], subprocess.CREATE_NO_WINDOW)
         else:

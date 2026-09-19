@@ -76,7 +76,9 @@ def public_id(value):
 
 class EngineAPIService:
     def __init__(self, manager=None, config_loader=None, log_path=None,
-                 launcher=None, start_timeout=2.0, stop_timeout=5.0):
+                 launcher=None, start_timeout=2.0, stop_timeout=5.0,
+                 config_path=None, config_replace=None, credential_store=None,
+                 email_sender=None):
         # Overrides support isolated API tests; HTTP callers cannot select paths.
         self.manager = manager if manager is not None else ProcessManager()
         self.config_loader = config_loader if config_loader is not None else lambda: load_config(CONFIG_PATH)
@@ -86,6 +88,17 @@ class EngineAPIService:
         self.stop_timeout = stop_timeout
         self._operation_lock = threading.Lock()
         self._child = None
+        # Imported here to keep the store's APIError dependency cycle harmless.
+        from api.config_store import MonitoringConfigStore
+        self.monitoring = MonitoringConfigStore(
+            self.manager, self._operation_lock, config_path=config_path,
+            replace=config_replace,
+        )
+        from api.email_settings import EmailSettingsService
+        self.email_settings = EmailSettingsService(
+            self.manager, self._operation_lock, self.monitoring,
+            credential_store=credential_store, email_sender=email_sender,
+        )
 
     def status(self):
         status = self.manager.inspect_status()
@@ -155,6 +168,11 @@ class EngineAPIService:
                 raise APIError(503, "Workflow configuration is unavailable or invalid.") from None
             options = dict(cwd=str(PROJECT_ROOT), stdin=subprocess.DEVNULL,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True)
+            config = self.config_loader()
+            credential = self.email_settings.credential(config.email["sender"])
+            options["env"] = os.environ.copy()
+            if credential:
+                options["env"]["SMTP_PASSWORD"] = credential
             if os.name == "nt":
                 options["creationflags"] = subprocess.CREATE_NO_WINDOW
             else:
