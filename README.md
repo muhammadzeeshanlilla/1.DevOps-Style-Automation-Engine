@@ -3,7 +3,7 @@
 A Python-based automation project developed in two stages: first as a CLI automation engine, and later as a complete full-stack local automation application.
 
 The project focuses on automating folder monitoring, scheduled reporting, email delivery, runtime control, and activity tracking.
-
+![Uploading Automation Engine image.png…]()
 ---
 
 ## Project Versions
