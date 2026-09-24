@@ -110,7 +110,9 @@ Project_Requirements_Python_Core_Engineering.pdf
 
 This document contains the initial requirements on which the automation engine was developed.
 
-Repository Structure
+## Repository Structure
+
+```text
 1.DevOps-Style-Automation-Engine/
 │
 ├── README.md
@@ -122,40 +124,47 @@ Repository Structure
 └── 2.FullStack-Version/
     ├── backend/
     └── frontend/
-Technology Stack
-Core Automation
-Python
-Threading
-JSON configuration
-SMTP
-File system monitoring
-Scheduling
-Logging
-Full-Stack Version
-Python
-FastAPI
-React
-JavaScript
-Vite
-CSS
-More Information
+```
+
+## Technology Stack
+
+### Core Automation
+
+- Python
+- Threading
+- JSON Configuration
+- SMTP
+- File System Monitoring
+- Scheduling
+- Logging
+
+### Full-Stack Version
+
+- Python
+- FastAPI
+- React
+- JavaScript
+- Vite
+- CSS
+
+## More Information
 
 Each version contains its own detailed documentation.
 
-For CLI usage, open:
+For CLI usage:
 
-1.CLI-Version/README.md
+[`1.CLI-Version/README.md`](1.CLI-Version/README.md)
 
-For the Full-Stack application, open:
+For the Full-Stack backend:
 
-2.FullStack-Version/backend/API_README.md
+[`2.FullStack-Version/backend/API_README.md`](2.FullStack-Version/backend/API_README.md)
 
-and:
+For the Full-Stack frontend:
 
-2.FullStack-Version/frontend/README.md
+[`2.FullStack-Version/frontend/README.md`](2.FullStack-Version/frontend/README.md)
 
-Author
+## Author
 
-Muhammad Zeeshan
+**Muhammad Zeeshan**
 
 Full-Stack Development • Python Automation • React • FastAPI
