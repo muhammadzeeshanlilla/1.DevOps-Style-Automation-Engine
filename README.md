@@ -3,9 +3,9 @@
 A Python-based automation project developed in two stages: first as a CLI automation engine, and later as a complete full-stack local automation application.
 
 The project focuses on automating folder monitoring, scheduled reporting, email delivery, runtime control, and activity tracking.
-![Uploading Automation Engine image.png…]()
----
 
+---
+![DevOps Automation Engine](./img.png)
 ## Project Versions
 
 ### 1. CLI Version
@@ -109,8 +109,6 @@ The original project requirement document is included in this repository:
 Project_Requirements_Python_Core_Engineering.pdf
 
 This document contains the initial requirements on which the automation engine was developed.
-
-![DevOps Automation Engine](./img.png)
 
 ## Repository Structure
 
