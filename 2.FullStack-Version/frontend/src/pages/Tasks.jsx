@@ -21,7 +21,7 @@ function safePath(path) {
   return '...\\' + parts.slice(-2).join('\\')
 }
 
-export default function Tasks({ data, email, engineState, onReload }) {
+export default function Tasks({ data, loadError, email, engineState, onReload }) {
   const [editing, setEditing] = useState(null)
   const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState(null)
@@ -55,6 +55,12 @@ export default function Tasks({ data, email, engineState, onReload }) {
     } catch (error) { setFeedback({ message: error.message, type: 'error' }) } finally { setBusyId('') }
   }
 
+  if (loadError) return <div className="load-failure" role="alert">
+    <InfoIcon size={34} weight="fill" />
+    <strong>Monitoring jobs could not be loaded.</strong>
+    <p>The backend configuration is unavailable or invalid. Correct it, then retry.</p>
+    <button className="button outline" type="button" onClick={onReload}><ArrowClockwiseIcon />Retry</button>
+  </div>
   if (!data) return <LoadingState label="Loading monitoring jobs..." />
   if (creating || editing) return <MonitoringJobForm job={editing} email={email}
     onSaved={finish} onCancel={() => { setCreating(false); setEditing(null) }} />

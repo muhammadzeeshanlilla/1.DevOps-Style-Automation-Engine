@@ -87,6 +87,15 @@ message; check the receiver inbox or spam folder. **Forget Saved App Password**
 deletes OS-stored and session copies without changing the non-secret settings.
 Email controls require the engine to be STOPPED.
 
+## Folder selection
+
+The Monitoring Job form provides **Browse Folder** beside the manual path field.
+It asks the local FastAPI backend to open the operating-system directory picker,
+fills the selected absolute path, and applies the existing validation. Cancelling
+leaves the current path unchanged. If native selection is unavailable, the form
+shows a safe fallback message and manual path entry plus **Validate Folder**
+continue to work.
+
 ## Verify
 
 ```powershell

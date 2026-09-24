@@ -62,6 +62,19 @@ unchanged.
 Open https://myaccount.google.com/apppasswords for setup. If App passwords is
 unavailable, the account may not currently be eligible.
 
+## Native folder picker
+
+POST /api/folders/select opens one native directory picker on the same machine
+as the local API. Tkinter runs in a dedicated helper process so its GUI loop does
+not share a thread with Uvicorn or the automation engine. Picker requests are
+serialized; a second request cannot open another dialog.
+
+The endpoint returns only the explicitly selected absolute path and the result
+of the existing folder validation. It never lists or uploads directory contents.
+Cancellation is a successful response with selected=false. If Tk or a graphical
+session is unavailable, the response instructs the user to enter a path manually.
+Manual POST /api/folders/validate and manual path entry remain supported.
+
 ## Install
 
 Run PowerShell from the `2.FullStack-Version/backend` directory. Python 3.10+ is required for the API dependencies; the standard-library CLI retains its existing Python requirement.
@@ -110,6 +123,7 @@ Ctrl+C stops the API server, not an independently running engine. Stop the engin
 | POST | /api/engine/stop | Existing instance-scoped cooperative stop; 200 ownership released, 202 still waiting, 409 unsafe ownership |
 | GET | /api/tasks | Read-only validated tasks from the configuration on disk |
 | GET | /api/logs | Sanitized recent log summaries; default limit 100, allowed range 1-200 |
+| POST | /api/folders/select | Open the serialized local native folder picker |
 | GET / PUT | /api/email-settings | Read safe status or save non-secret settings and a write-only credential |
 | POST | /api/email-settings/test | Send an explicitly requested SMTP test message while stopped |
 | DELETE | /api/email-settings/credential | Remove session and OS-stored credential copies |
@@ -178,7 +192,7 @@ python -B -m unittest discover -s tests
 .\.venv\Scripts\python.exe -m pip check
 ```
 
-Verification: **406 existing tests + 103 separate API tests = 509 passing tests**.
+Verification: **406 existing tests + 116 separate API tests = 522 passing tests**.
 
 API tests cover safe schemas, ownership changes, corrupt/stale snapshots, secret exclusion, bounded logs, CORS/Host/origin safeguards, HTTP error semantics and start/stop behavior. Five integration tests run the real existing CLI/Engine with injected idle configuration and isolated temporary runtime directories. They verify CLI/API interoperability and concurrent ownership without sending SMTP or editing customer configuration.
 

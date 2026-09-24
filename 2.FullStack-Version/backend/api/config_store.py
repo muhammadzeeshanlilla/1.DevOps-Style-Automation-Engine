@@ -1,6 +1,7 @@
 """Validated, atomic configuration updates for the monitoring-job API."""
 
 import json
+import logging
 import os
 import tempfile
 from pathlib import Path
@@ -15,6 +16,7 @@ from api.service import APIError
 
 
 MUTATION_BLOCKED = "Stop the engine before modifying monitoring configuration."
+logger = logging.getLogger("uvicorn.error")
 
 
 def _trigger_json(trigger):
@@ -66,7 +68,11 @@ class MonitoringConfigStore:
     def _load(self):
         try:
             return load_config(self.config_path)
-        except (ConfigurationError, OSError, ValueError):
+        except ConfigurationError as error:
+            logger.error("Workflow configuration validation failed: %s", error)
+            raise APIError(503, "Workflow configuration is unavailable or invalid.") from None
+        except (OSError, ValueError) as error:
+            logger.error("Workflow configuration read failed (%s).", type(error).__name__)
             raise APIError(503, "Workflow configuration is unavailable or invalid.") from None
 
     def list_jobs(self):

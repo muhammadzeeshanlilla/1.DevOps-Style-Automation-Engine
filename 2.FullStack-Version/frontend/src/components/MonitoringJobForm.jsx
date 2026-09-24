@@ -1,6 +1,6 @@
 import { CheckCircleIcon, FolderOpenIcon, XCircleIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
-import { createMonitoringJob, updateMonitoringJob, validateFolder } from '../api/client'
+import { createMonitoringJob, selectFolder, updateMonitoringJob, validateFolder } from '../api/client'
 
 const emptyForm = {
   id: '', folder_path: '', scheduleType: 'daily',
@@ -23,6 +23,7 @@ export default function MonitoringJobForm({ job, email, onSaved, onCancel }) {
   const [folderState, setFolderState] = useState('idle')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pickerOpening, setPickerOpening] = useState(false)
   const set = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }))
     if (field === 'folder_path') setFolderState('idle')
@@ -39,6 +40,27 @@ export default function MonitoringJobForm({ job, email, onSaved, onCancel }) {
       setFolderState('invalid')
       setMessage(error.message)
     } finally { setBusy(false) }
+  }
+
+  const browseFolder = async () => {
+    setBusy(true)
+    setPickerOpening(true)
+    setMessage('')
+    try {
+      const result = await selectFolder()
+      if (!result.selected) {
+        if (!result.available) setMessage(result.message || 'Folder picker is unavailable. Enter the folder path manually.')
+        return
+      }
+      setForm((current) => ({ ...current, folder_path: result.path }))
+      setFolderState(result.valid ? 'valid' : 'invalid')
+      if (!result.valid) setMessage(result.message || 'Selected folder could not be used.')
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setPickerOpening(false)
+      setBusy(false)
+    }
   }
 
   const save = async (event) => {
@@ -80,9 +102,14 @@ export default function MonitoringJobForm({ job, email, onSaved, onCancel }) {
           <input value={form.folder_path} disabled={busy} required placeholder="C:\Projects\Reports"
             onChange={(event) => set('folder_path', event.target.value)} />
         </label>
-          <button className="button outline" type="button" disabled={busy || !form.folder_path.trim()} onClick={checkFolder}>
-            <FolderOpenIcon />Validate Folder
-          </button>
+          <div className="folder-actions">
+            <button className="button outline" type="button" disabled={busy} onClick={browseFolder}>
+              <FolderOpenIcon />{pickerOpening ? 'Opening folder picker...' : 'Browse Folder'}
+            </button>
+            <button className="button outline" type="button" disabled={busy || !form.folder_path.trim()} onClick={checkFolder}>
+              Validate Folder
+            </button>
+          </div>
         </div>
         {folderState !== 'idle' && <p className={'validation-result ' + folderState} role="status">
           {folderState === 'valid' ? <CheckCircleIcon weight="fill" /> : <XCircleIcon weight="fill" />}

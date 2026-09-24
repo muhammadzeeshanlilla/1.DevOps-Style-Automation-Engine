@@ -1,6 +1,7 @@
 """Thin process/configuration adapters, never a second automation engine."""
 
 import os
+import logging
 import re
 import subprocess
 import sys
@@ -19,6 +20,7 @@ from api.schemas.responses import (
 )
 
 MAX_LOG_BYTES = 64 * 1024
+logger = logging.getLogger("uvicorn.error")
 ENGINE_PYTHON = getattr(sys, "_base_executable", sys.executable) if os.name == "nt" else sys.executable
 LOG_HEADER = re.compile(
     r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \[(DEBUG|INFO|WARNING|ERROR|CRITICAL)\] (.*)$"
@@ -53,6 +55,9 @@ LOG_PREFIXES = (
     ("Engine startup or runtime failed: ", "Engine startup or runtime failed."),
     ("Lifecycle notification failed", "Lifecycle notification failed."),
 )
+JOB_CHANGE_LOG = re.compile(r"^(NEW|MODIFIED|DELETED) file detected \| job='([^']+)'$")
+JOB_CHANGE_MESSAGES = {"NEW": "New file detected", "MODIFIED": "Modified file detected",
+                       "DELETED": "Deleted file detected"}
 
 
 class APIError(Exception):
@@ -78,7 +83,7 @@ class EngineAPIService:
     def __init__(self, manager=None, config_loader=None, log_path=None,
                  launcher=None, start_timeout=2.0, stop_timeout=5.0,
                  config_path=None, config_replace=None, credential_store=None,
-                 email_sender=None):
+                 email_sender=None, folder_picker=None):
         # Overrides support isolated API tests; HTTP callers cannot select paths.
         self.manager = manager if manager is not None else ProcessManager()
         self.config_loader = config_loader if config_loader is not None else lambda: load_config(CONFIG_PATH)
@@ -98,6 +103,24 @@ class EngineAPIService:
         self.email_settings = EmailSettingsService(
             self.manager, self._operation_lock, self.monitoring,
             credential_store=credential_store, email_sender=email_sender,
+        )
+        from api.folder_picker import NativeFolderPicker
+        self.folder_picker = folder_picker or NativeFolderPicker()
+
+    def select_folder(self):
+        from api.schemas.monitoring import FolderSelectionResponse
+
+        result = self.folder_picker.select()
+        if not result.selected:
+            return FolderSelectionResponse(
+                selected=False, valid=False, available=result.available,
+                message=result.message,
+            )
+        validation = self.monitoring.validate_folder(result.path)
+        return FolderSelectionResponse(
+            selected=True, path=result.path, valid=validation.valid,
+            available=True,
+            message="" if validation.valid else "Selected folder could not be used.",
         )
 
     def status(self):
@@ -138,7 +161,11 @@ class EngineAPIService:
     def tasks(self):
         try:
             config = self.config_loader()
-        except (ConfigurationError, OSError, ValueError):
+        except ConfigurationError as error:
+            logger.error("Workflow configuration validation failed: %s", error)
+            raise APIError(503, "Workflow configuration is unavailable or invalid.") from None
+        except (OSError, ValueError) as error:
+            logger.error("Workflow configuration read failed (%s).", type(error).__name__)
             raise APIError(503, "Workflow configuration is unavailable or invalid.") from None
         tasks = []
         for task in config.tasks:
@@ -239,8 +266,12 @@ class EngineAPIService:
                 continue
             message = FIXED_LOG_MESSAGES.get(raw_message)
             if message is None:
-                message = next((summary for prefix, summary in LOG_PREFIXES if raw_message.startswith(prefix)),
-                               "Additional log details withheld for privacy.")
+                job_change = JOB_CHANGE_LOG.fullmatch(raw_message)
+                if job_change:
+                    message = f"{JOB_CHANGE_MESSAGES[job_change.group(1)]} - {public_id(job_change.group(2))}."
+                else:
+                    message = next((summary for prefix, summary in LOG_PREFIXES if raw_message.startswith(prefix)),
+                                   "Additional log details withheld for privacy.")
             entries.append(LogEntry(timestamp=timestamp, level=level, message=message))
         truncated = bool(start) or len(entries) > limit
         entries = entries[-limit:]

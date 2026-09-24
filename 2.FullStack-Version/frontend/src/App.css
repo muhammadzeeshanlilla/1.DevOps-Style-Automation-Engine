@@ -148,6 +148,7 @@
 .job-form label > small { display: block; margin-top: 6px; color: var(--slate-500); font-weight: 400; }
 .folder-field { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
 .folder-field label { min-width: 0; }
+.folder-actions { display: flex; gap: 8px; }
 .job-form fieldset { margin: 0; padding: 17px; border: 1px solid var(--slate-200); border-radius: 9px; }
 .job-form legend { padding: 0 7px; }
 .schedule-options { display: flex; flex-wrap: wrap; gap: 18px; }
@@ -229,6 +230,10 @@
 .capability-list p { display: flex; align-items: center; gap: 9px; margin: 0; color: #38516b; font-size: 12px; font-weight: 650; }
 .capability-list svg { flex: 0 0 auto; color: var(--green-600); }
 .loading-state { min-height: 260px; display: flex; align-items: center; justify-content: center; gap: 11px; color: var(--slate-500); font-size: 14px; }
+.load-failure { min-height: 260px; display: grid; place-items: center; align-content: center; gap: 10px; padding: 30px; border: 1px solid #f3c7c2; border-radius: 11px; color: #8d251e; background: #fff; text-align: center; box-shadow: var(--shadow); }
+.load-failure strong { color: #6f201a; font-size: 17px; }
+.load-failure p { max-width: 520px; margin: 0 0 5px; color: #6e5a58; font-size: 13px; line-height: 1.5; }
+.load-failure .button { width: auto; }
 .spin { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -285,6 +290,7 @@
   .log-list p { grid-column: 1 / -1; }
   .settings-list > div { grid-template-columns: 1fr; gap: 7px; }
   .email-settings, .folder-field, .form-grid { grid-template-columns: 1fr; }
+  .folder-actions { display: grid; grid-template-columns: 1fr; }
   .credential-badge { align-self: flex-start; }
   .job-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .job-actions .toggle { grid-column: 1 / -1; min-height: 40px; }

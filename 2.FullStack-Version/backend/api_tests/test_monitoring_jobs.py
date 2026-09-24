@@ -168,6 +168,51 @@ class MonitoringJobTests(unittest.TestCase):
         config = load_config(self.config_path)
         self.assertEqual([task.id for task in config.tasks], ["existing-email"])
 
+    def test_delete_one_of_multiple_jobs_preserves_all_other_configuration(self):
+        second = self.root / "second"
+        second.mkdir()
+        self.assertEqual(self.create(job_id="report-one").status_code, 201)
+        self.assertEqual(self.create(job_id="report-two", folder=second).status_code, 201)
+
+        response = self.client.delete("/api/monitoring-jobs/report-one")
+        self.assertEqual(response.status_code, 200)
+
+        config = load_config(self.config_path)
+        self.assertEqual([task.id for task in config.tasks],
+                         ["existing-email", "report-two"])
+        self.assertEqual(config.email["sender"], "sender@example.com")
+        self.assertEqual(config.email["receiver"], "receiver@example.com")
+        self.assertFalse(config.notifications.enabled)
+        self.assertEqual(self.client.get("/api/tasks").status_code, 200)
+        self.assertEqual(self.client.get("/api/email-settings").status_code, 200)
+        jobs = self.client.get("/api/monitoring-jobs")
+        self.assertEqual(jobs.status_code, 200)
+        self.assertEqual([job["id"] for job in jobs.json()["jobs"]], ["report-two"])
+
+    def test_delete_last_monitoring_job_leaves_valid_empty_job_list(self):
+        self.assertEqual(self.create().status_code, 201)
+        self.assertEqual(
+            self.client.delete("/api/monitoring-jobs/report-one").status_code, 200
+        )
+        config = load_config(self.config_path)
+        self.assertEqual(
+            [task.id for task in config.tasks if task.type == "folder_report"], []
+        )
+        self.assertEqual(self.client.get("/api/monitoring-jobs").json()["count"], 0)
+        self.assertEqual(self.client.get("/api/tasks").status_code, 200)
+        self.assertEqual(self.client.get("/api/email-settings").status_code, 200)
+
+    def test_repeated_delete_returns_404_without_changing_valid_config(self):
+        self.assertEqual(self.create().status_code, 201)
+        self.assertEqual(
+            self.client.delete("/api/monitoring-jobs/report-one").status_code, 200
+        )
+        after_first_delete = self.config_path.read_bytes()
+        response = self.client.delete("/api/monitoring-jobs/report-one")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.config_path.read_bytes(), after_first_delete)
+        load_config(self.config_path)
+
     def test_missing_job(self):
         self.assertEqual(self.client.get("/api/monitoring-jobs/missing").status_code, 404)
         self.assertEqual(self.client.delete("/api/monitoring-jobs/missing").status_code, 404)

@@ -2,6 +2,8 @@
 .env
 .env.*
 *.env
+/config/settings.json
+/config/settings.json.backup-*
 
 # Runtime files
 /engine.pid

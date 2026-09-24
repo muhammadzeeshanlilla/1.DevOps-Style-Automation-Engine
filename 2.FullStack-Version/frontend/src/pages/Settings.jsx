@@ -7,7 +7,7 @@ import {
   API_BASE_URL, forgetEmailCredential, sendTestEmail, updateEmailSettings,
 } from '../api/client'
 
-export default function Settings({ tasks, email, engineState, onEmailUpdated }) {
+export default function Settings({ tasks, email, loadError, engineState, onEmailUpdated, onReload }) {
   const [form, setForm] = useState(() => ({
     sender: email?.sender || '',
     receiver: email?.receiver || '',
@@ -23,6 +23,13 @@ export default function Settings({ tasks, email, engineState, onEmailUpdated }) 
   const frontendUrl = window.location.origin
 
   const set = (field, value) => setForm((current) => ({ ...current, [field]: value }))
+
+  if (loadError) return <div className="load-failure" role="alert">
+    <WarningCircleIcon size={34} weight="fill" />
+    <strong>Email settings could not be loaded.</strong>
+    <p>The backend configuration is unavailable or invalid. Correct it, then retry.</p>
+    <button className="button outline" type="button" onClick={onReload}>Retry</button>
+  </div>
 
   const save = async (event) => {
     event.preventDefault()

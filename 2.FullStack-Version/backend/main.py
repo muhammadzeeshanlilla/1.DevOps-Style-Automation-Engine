@@ -40,6 +40,8 @@ class Engine:
         event_tasks = any(task.enabled and isinstance(task.trigger, FileEventTrigger) for task in config.tasks)
         self.event_dispatcher = EventDispatcher(config.tasks) if event_tasks else None
         self.file_monitors = {}
+        report_ids = {Path(task.parameters["path"]).resolve(): task.id for task in config.tasks
+                      if task.enabled and task.type == "folder_report"}
         for task in config.tasks:
             if not task.enabled:
                 continue
@@ -53,6 +55,7 @@ class Engine:
                     self.file_monitors[folder] = FileMonitor(str(folder))
                 else:
                     self.file_monitors[folder] = FileMonitor(str(folder), event_submit=self.event_dispatcher.submit)
+                self.file_monitors[folder]._report_job_id = report_ids.get(folder)
         self.task_registry = TaskRegistry(config.email, self.file_monitors)
         self.notification_service = LifecycleNotificationService(config.email, config.notifications)
         self.runtime_status = RuntimeStatus(config.tasks, self.process_manager.runtime_dir)

@@ -80,6 +80,7 @@ export const deleteMonitoringJob = (id) => request('/api/monitoring-jobs/' + enc
 export const validateFolder = (path) => request('/api/folders/validate', {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }),
 })
+export const selectFolder = () => request('/api/folders/select', { method: 'POST' })
 export const getEmailSettings = () => request('/api/email-settings')
 export const updateEmailSettings = (body) => request('/api/email-settings', {
   method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),

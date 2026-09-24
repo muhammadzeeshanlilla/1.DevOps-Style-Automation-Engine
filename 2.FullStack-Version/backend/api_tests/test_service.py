@@ -162,6 +162,14 @@ class ServiceTests(APITestCase):
         self.log_path.write_text("2026-09-18 12:00:00 [ERROR] arbitrary private body\n")
         self.assertEqual(self.service.logs(100).entries[0].message, "Additional log details withheld for privacy.")
 
+    def test_file_change_log_exposes_safe_job_id_not_file_details(self):
+        self.log_path.write_text(
+            "2026-09-18 12:00:00 [INFO] NEW file detected | job='billing-report'\n")
+        message = self.service.logs(100).entries[0].message
+        self.assertEqual(message, "New file detected - billing-report.")
+        self.assertNotIn("private.txt", message)
+        self.assertNotIn("watched_folder", message)
+
     def test_snapshot_ids_are_redacted_at_read_time(self):
         self.publish()
         with patch.dict(os.environ, {"SMTP_PASSWORD": "email-job"}):

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Response
 from api.dependencies import get_service, require_local_origin
 from api.schemas.monitoring import (
     DeleteResponse, EnabledUpdate, FolderValidationRequest,
-    FolderValidationResponse, MonitoringJobCreate, MonitoringJobResponse,
+    FolderSelectionResponse, FolderValidationResponse, MonitoringJobCreate, MonitoringJobResponse,
     MonitoringJobsResponse, MonitoringJobUpdate,
 )
 from api.service import EngineAPIService
@@ -16,6 +16,12 @@ router = APIRouter()
 def validate_folder(request: FolderValidationRequest,
                     service: EngineAPIService = Depends(get_service)):
     return service.monitoring.validate_folder(request.path)
+
+
+@router.post("/folders/select", response_model=FolderSelectionResponse,
+             dependencies=[Depends(require_local_origin)], tags=["monitoring"])
+def select_folder(service: EngineAPIService = Depends(get_service)):
+    return service.select_folder()
 
 
 @router.get("/monitoring-jobs", response_model=MonitoringJobsResponse, tags=["monitoring"])

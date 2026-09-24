@@ -83,6 +83,7 @@ class JobScheduler:
             logger.info("Scheduler worker exiting.")
 
     def _run_due_tasks(self):
+        due_work = []
         for task in self.tasks:
             if self._stop_event.is_set():
                 break
@@ -104,18 +105,49 @@ class JobScheduler:
                     continue
                 self._daily_claims[task.id] = due.date()
                 self._daily_due[task.id] = due + timedelta(days=1)
-                self._execute(task)
+                if task.type == "folder_report":
+                    due_work.append((task, ("daily", due)))
+                else:
+                    self._execute(task)
             elif isinstance(trigger, IntervalTrigger):
                 due = self._interval_due[task.id]
                 if self._monotonic_clock() < due:
                     continue
-                try:
+                if task.type == "folder_report":
+                    due_work.append((task, ("interval",)))
+                else:
+                    try:
+                        self._execute(task)
+                    finally:
+                        period = trigger.every_minutes * 60
+                        finished = self._monotonic_clock()
+                        steps = max(1, int((finished - due) // period) + 1)
+                        self._interval_due[task.id] = due + steps * period
+
+        processed = set()
+        for task, group_key in due_work:
+            if self._stop_event.is_set():
+                break
+            if task.id in processed:
+                continue
+            group = tuple(candidate for candidate, key in due_work if key == group_key)
+            completed = group if len(group) > 1 else (task,)
+            try:
+                if len(completed) > 1:
+                    self.runner.run_reports(completed)
+                    processed.update(candidate.id for candidate in completed)
+                else:
                     self._execute(task)
-                finally:
-                    period = trigger.every_minutes * 60
-                    finished = self._monotonic_clock()
-                    steps = max(1, int((finished - due) // period) + 1)
-                    self._interval_due[task.id] = due + steps * period
+                    processed.add(task.id)
+            finally:
+                for completed_task in completed:
+                    trigger = completed_task.trigger
+                    if isinstance(trigger, IntervalTrigger):
+                        due = self._interval_due[completed_task.id]
+                        period = trigger.every_minutes * 60
+                        finished = self._monotonic_clock()
+                        steps = max(1, int((finished - due) // period) + 1)
+                        self._interval_due[completed_task.id] = due + steps * period
 
     def _execute(self, task, context=None):
         if self.event_dispatcher is None:

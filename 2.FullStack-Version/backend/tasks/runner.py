@@ -83,3 +83,36 @@ class TaskRunner:
             except Exception:
                 logger.error("Lifecycle notification failed; original task result preserved.")
         return result
+
+    def run_reports(self, tasks):
+        """Execute one same-window folder-report group with per-task outcomes."""
+        tasks = tuple(tasks)
+        if not tasks or any(not isinstance(task, TaskDefinition) or task.type != "folder_report"
+                            or not task.enabled for task in tasks):
+            raise TypeError("TaskRunner requires enabled folder-report definitions")
+        for task in tasks:
+            logger.info("Task started | %s", _log_label(task))
+        self._observe("execution_started", tasks[0], None)
+        try:
+            try:
+                results = self.registry.resolve("folder_report").execute_many(tasks)
+            except Exception as error:
+                category = type(error).__name__
+                results = tuple(TaskExecutionResult(
+                    task.id, "FAILED", error=f"Task handler raised {category} during execution.")
+                    for task in tasks)
+            for task, result in zip(tasks, results):
+                if result.success:
+                    logger.info("Task completed | %s", _log_label(task))
+                else:
+                    logger.error("Task failed | %s", _log_label(task))
+                self._observe("result_finalized", result)
+                if self.notification_service is not None:
+                    self._observe("notification_started")
+                    try:
+                        self.notification_service.notify(result)
+                    except Exception:
+                        logger.error("Lifecycle notification failed; original task result preserved.")
+            return results
+        finally:
+            self._observe("execution_finished")

@@ -5,6 +5,8 @@
 import os                              # Read the SMTP password from the environment
 import smtplib                          # Built-in library for email sending
 import ssl                             # Verify the SMTP server's identity
+from datetime import datetime
+from pathlib import Path
 from email.mime.text import MIMEText    # Used to build the email body
 from email.mime.multipart import MIMEMultipart  # Used to build the full email
 from utils.logger import get_logger
@@ -113,3 +115,63 @@ def send_report_email(config, changes):
         body += "\n\nThis report was generated automatically."
 
     return send_email(config, subject, body)
+
+
+def _report_event_line(change):
+    prefixes = {
+        "NEW file detected: ": "NEW: ",
+        "MODIFIED file: ": "MODIFIED: ",
+        "DELETED file: ": "DELETED: ",
+    }
+    return next((label + change[len(prefix):] for prefix, label in prefixes.items()
+                 if change.startswith(prefix)), change)
+
+
+def _folder_label(folder):
+    name = Path(folder).name
+    return f"...\\{name}" if name else "Configured folder"
+
+
+def _event_counts(changes):
+    return {kind: sum(change.startswith(prefix) for change in changes)
+            for kind, prefix in (("new", "NEW file detected: "),
+                                 ("modified", "MODIFIED file: "),
+                                 ("deleted", "DELETED file: "))}
+
+
+def send_folder_report_email(config, reports, report_time=None):
+    """Build one plain-text message for one or more independently owned batches."""
+    reports = tuple(reports)
+    if not reports:
+        raise ValueError("At least one report is required")
+    timestamp = report_time or datetime.now()
+    if len(reports) == 1:
+        subject = f"DevOps Automation Engine \u2014 Folder Report \u2014 {reports[0]['task_id']}"
+        title = "Folder Activity Report"
+    else:
+        subject = f"DevOps Automation Engine \u2014 {len(reports)} Monitoring Reports \u2014 {timestamp:%H:%M}"
+        title = "Consolidated Folder Activity Report"
+    lines = ["DevOps Automation Engine", title, "",
+             f"Report Time: {timestamp:%Y-%m-%d %H:%M}",
+             f"Monitoring Jobs: {len(reports)}"]
+    overall = {"new": 0, "modified": 0, "deleted": 0}
+    for report in reports:
+        changes = report["changes"]
+        counts = _event_counts(changes)
+        for kind in overall:
+            overall[kind] += counts[kind]
+        lines.extend(("", "=" * 50,
+                      f"Monitoring Job: {report['task_id']}",
+                      f"Folder: {_folder_label(report['folder'])}", "", "Changes:"))
+        lines.extend((_report_event_line(change) for change in changes)
+                     if changes else ("No changes detected.",))
+        lines.extend(("", "Summary:", f"New: {counts['new']}",
+                      f"Modified: {counts['modified']}", f"Deleted: {counts['deleted']}"))
+    if len(reports) > 1:
+        lines.extend(("", "=" * 50, "", "Overall Summary:",
+                      f"Monitoring Jobs: {len(reports)}",
+                      f"New files: {overall['new']}",
+                      f"Modified files: {overall['modified']}",
+                      f"Deleted files: {overall['deleted']}"))
+    lines.extend(("", "This report was generated automatically."))
+    return send_email(config, subject, "\n".join(lines))

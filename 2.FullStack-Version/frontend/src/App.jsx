@@ -16,16 +16,19 @@ function App() {
   const [status, setStatus] = useState(null)
   const [tasks, setTasks] = useState(null)
   const [monitoringJobs, setMonitoringJobs] = useState(null)
+  const [monitoringJobsError, setMonitoringJobsError] = useState('')
   const [emailSettings, setEmailSettings] = useState(null)
+  const [emailSettingsError, setEmailSettingsError] = useState('')
   const [connection, setConnection] = useState('checking')
   const [initialLoading, setInitialLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [statusError, setStatusError] = useState('')
-  const pollInFlight = useRef(false)
+  const statusPollInFlight = useRef(false)
+  const configurationRequestId = useRef(0)
 
   const refreshStatus = useCallback(async ({ foreground = false } = {}) => {
-    if (pollInFlight.current) return
-    pollInFlight.current = true
+    if (statusPollInFlight.current) return
+    statusPollInFlight.current = true
     if (foreground) setRefreshing(true)
     try {
       setStatus(await getStatus())
@@ -37,14 +40,13 @@ function App() {
         ? 'The local API is unavailable. Start the backend, then try again.'
         : 'Engine status is temporarily unavailable. Retry in a moment.')
     } finally {
-      pollInFlight.current = false
+      statusPollInFlight.current = false
       if (foreground) setRefreshing(false)
     }
   }, [])
 
   const refreshAll = useCallback(async ({ foreground = false } = {}) => {
-    if (pollInFlight.current) return
-    pollInFlight.current = true
+    const requestId = ++configurationRequestId.current
     if (foreground) setRefreshing(true)
     try {
       const [healthResult, statusResult, tasksResult, jobsResult, emailResult] = await Promise.allSettled([
@@ -63,13 +65,24 @@ function App() {
       } else {
         setStatusError('The local API is unavailable. Start the backend, then try again.')
       }
-      if (tasksResult.status === 'fulfilled') setTasks(tasksResult.value)
-      if (jobsResult.status === 'fulfilled') setMonitoringJobs(jobsResult.value)
-      if (emailResult.status === 'fulfilled') setEmailSettings(emailResult.value)
+      if (requestId === configurationRequestId.current) {
+        if (tasksResult.status === 'fulfilled') setTasks(tasksResult.value)
+        if (jobsResult.status === 'fulfilled') {
+          setMonitoringJobs(jobsResult.value)
+          setMonitoringJobsError('')
+        } else {
+          setMonitoringJobsError('Monitoring jobs could not be loaded.')
+        }
+        if (emailResult.status === 'fulfilled') {
+          setEmailSettings(emailResult.value)
+          setEmailSettingsError('')
+        } else {
+          setEmailSettingsError('Email settings could not be loaded.')
+        }
+      }
     } finally {
-      pollInFlight.current = false
       if (foreground) setRefreshing(false)
-      setInitialLoading(false)
+      if (requestId === configurationRequestId.current) setInitialLoading(false)
     }
   }, [])
 
@@ -89,13 +102,14 @@ function App() {
   }
 
   const page = activePage === 'tasks'
-    ? <Tasks data={monitoringJobs} email={emailSettings} engineState={status?.state}
+    ? <Tasks data={monitoringJobs} loadError={monitoringJobsError} email={emailSettings} engineState={status?.state}
         onReload={() => refreshAll({ foreground: true })} />
     : activePage === 'logs'
       ? <Logs />
       : activePage === 'settings'
-        ? <Settings key={emailSettings?.sender || 'email-loading'} tasks={tasks} email={emailSettings} engineState={status?.state}
-            onEmailUpdated={setEmailSettings} />
+        ? <Settings key={emailSettings?.sender || 'email-loading'} tasks={tasks} email={emailSettings}
+            loadError={emailSettingsError} engineState={status?.state}
+            onEmailUpdated={setEmailSettings} onReload={() => refreshAll({ foreground: true })} />
         : <Dashboard health={health} status={status} monitoringJobs={monitoringJobs} connection={connection}
             initialLoading={initialLoading} refreshing={refreshing} statusError={statusError}
             onRefresh={() => refreshAll({ foreground: true })} />

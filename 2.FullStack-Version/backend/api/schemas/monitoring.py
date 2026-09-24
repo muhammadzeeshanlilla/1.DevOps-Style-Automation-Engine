@@ -57,6 +57,14 @@ class FolderValidationResponse(BaseModel):
     accessible: bool
 
 
+class FolderSelectionResponse(BaseModel):
+    selected: bool
+    path: str | None = None
+    valid: bool
+    available: bool = True
+    message: str = ""
+
+
 class ScheduleResponse(BaseModel):
     type: Literal["daily", "interval"]
     hour: int | None = None
@@ -82,4 +90,3 @@ class MonitoringJobsResponse(BaseModel):
 class DeleteResponse(BaseModel):
     deleted: Literal[True] = True
     id: str
-

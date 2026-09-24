@@ -203,7 +203,8 @@ class HTTPTests(APITestCase):
         paths = self.client.get("/openapi.json").json()["paths"]
         self.assertEqual(set(paths), {"/api/health", "/api/status", "/api/tasks", "/api/logs",
                                      "/api/engine/start", "/api/engine/stop",
-                                     "/api/folders/validate", "/api/monitoring-jobs",
+                                     "/api/folders/validate", "/api/folders/select",
+                                     "/api/monitoring-jobs",
                                      "/api/monitoring-jobs/{job_id}",
                                      "/api/monitoring-jobs/{job_id}/enabled",
                                      "/api/email-settings", "/api/email-settings/test",

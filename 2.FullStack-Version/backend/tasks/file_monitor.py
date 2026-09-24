@@ -18,11 +18,12 @@ class FileMonitor:
     It runs in a background thread so it does not block anything else.
     """
 
-    def __init__(self, folder_path, event_submit=None):
+    def __init__(self, folder_path, event_submit=None, report_job_id=None):
         # The path of the folder to watch (comes from config)
         self.folder_path = folder_path
         self._event_submit = event_submit
         self._event_folder = Path(folder_path).resolve() if event_submit is not None else None
+        self._report_job_id = report_job_id
 
         # This dictionary stores filename -> last modified time
         # We use it to detect changes
@@ -65,7 +66,7 @@ class FileMonitor:
         for filename in current:
             if filename not in self.known_files:
                 msg = f"NEW file detected: {filename}"
-                logger.info(msg)
+                self._log_change("NEW")
                 self._record_change(msg)
                 self._submit_event("new", filename)
 
@@ -73,7 +74,7 @@ class FileMonitor:
         for filename in self.known_files:
             if filename not in current:
                 msg = f"DELETED file: {filename}"
-                logger.info(msg)
+                self._log_change("DELETED")
                 self._record_change(msg)
                 self._submit_event("deleted", filename)
 
@@ -82,7 +83,7 @@ class FileMonitor:
             if filename in self.known_files:
                 if current[filename] != self.known_files[filename]:
                     msg = f"MODIFIED file: {filename}"
-                    logger.info(msg)
+                    self._log_change("MODIFIED")
                     self._record_change(msg)
                     self._submit_event("modified", filename)
 
@@ -169,6 +170,12 @@ class FileMonitor:
     def _record_change(self, message):
         with self._changes_lock:
             self.changes.append(message)
+
+    def _log_change(self, event_type):
+        if self._report_job_id:
+            logger.info("%s file detected | job=%r", event_type, self._report_job_id)
+        else:
+            logger.info("%s file detected", event_type)
 
     def get_and_clear_changes(self):
         """
