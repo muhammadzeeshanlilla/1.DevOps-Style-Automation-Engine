@@ -110,6 +110,8 @@ Project_Requirements_Python_Core_Engineering.pdf
 
 This document contains the initial requirements on which the automation engine was developed.
 
+img.png
+
 ## Repository Structure
 
 ```text
